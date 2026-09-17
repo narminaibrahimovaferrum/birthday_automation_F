@@ -1,0 +1,43 @@
+name: Daily Birthday Automation
+
+on:
+  schedule:
+    # 05:00 UTC = 09:00 Baku Time (UTC+4)
+    - cron: '0 5 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI anytime
+
+permissions:
+  contents: write
+
+jobs:
+  run-birthday-bot:
+    runs-on: windows-latest
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🚀 Run Birthday Automation
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TIMEZONE: 'Asia/Baku'
+          DATA_FILE: 'data/employees.xlsx'
+        run: npm run run-now
+
+      - name: 💾 Commit & Push updated state
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f state/sent.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update sent.json [skip ci]" && git push)
